@@ -100,9 +100,15 @@ async function querySTKStatus(checkoutRequestId) {
 
 try {
     const { access_token } = await getMpesaAccessToken();
-    const passkey = 
-    process.env.SANDBOX_MPESA_PASSKEY;
-    const BusinessShortCode = 174379;
+
+    console.log("ACCESS TOKEN:");
+    console.log(access_token);
+
+   const passkey = process.env.SANDBOX_MPESA_PASSKEY;
+   const BusinessShortCode = 174379;
+
+   console.log("PASSKEY EXISTS:", !!passkey);
+   console.log("SHORTCODE:", BusinessShortCode);
 
     const Timestamp = generateTimestamp();
     const password = btoa(`${BusinessShortCode}${passkey}${Timestamp}`);

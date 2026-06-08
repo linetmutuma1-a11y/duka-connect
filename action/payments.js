@@ -8,32 +8,43 @@ router.get(
   "/payment-status/:checkoutRequestId",
   async (req, res) => {
     try {
-      const result = await querySTKStatus(
-        req.params.checkoutRequestId
-      );
+      const result =
+        await querySTKStatus(
+          req.params.checkoutRequestId
+        );
 
-      if (result.ResultCode === 0) {
+      if (
+        result.ResultCode === "0" ||
+        result.ResultCode === 0
+      ) {
         const thankYouMessage =
           await generateThankYou(
             "Customer",
-            "your payment"
+            1000
           );
 
-        return res.json({
+        return res.status(200).json({
           paymentStatus: "SUCCESS",
           thankYouMessage,
-          mpesa: result
+          mpesa: result,
         });
       }
 
-      res.json(result);
+      return res.status(200).json({
+        paymentStatus: "FAILED",
+        message: result.ResultDesc,
+        mpesa: result,
+      });
 
     } catch (error) {
-      console.error(error);
+      console.error(
+        "PAYMENT STATUS ERROR:",
+        error
+      );
 
       res.status(500).json({
         error:
-          "Failed to query payment status"
+          "Failed to query payment status",
       });
     }
   }

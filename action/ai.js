@@ -5,17 +5,55 @@ dotenv.config();
 
 const router = express.Router();
 
-router.post("/generate-description", async (req, res) => {
-  try {
-    const { productName, keywords } = req.body;
-
-    if (!productName) {
-      return res.status(400).json({
-        error: "productName is required",
-      });
+// Reusable Gemini function
+async function callGemini(prompt) {
+  const response = await fetch(
+    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
+    {
+      method: "POST",
+      headers: {
+        "x-goog-api-key":
+          process.env.SANDBOX_GEMINI_DUKA_AI_KEY,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [
+              {
+                text: prompt,
+              },
+            ],
+          },
+        ],
+      }),
     }
+  );
 
-    const prompt = `
+  const data = await response.json();
+
+  return (
+    data?.candidates?.[0]?.content?.parts?.[0]?.text ||
+    null
+  );
+}
+
+// Product description endpoint
+router.post(
+  "/generate-description",
+  async (req, res) => {
+    try {
+      const { productName, keywords } =
+        req.body;
+
+      if (!productName) {
+        return res.status(400).json({
+          error:
+            "productName is required",
+        });
+      }
+
+      const prompt = `
 Celebrate. Connect. Play.
 
 Product Name: ${productName}
@@ -28,59 +66,37 @@ No explanations.
 Return only the description.
 `;
 
+      const generatedText =
+        await callGemini(prompt);
 
-    const response = await fetch(
-      "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
-      {
-        method: "POST",
-        headers: {
-          "x-goog-api-key": process.env.SANDBOX_GEMINI_DUKA_AI_KEY,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [
-                {
-                  text: prompt,
-                },
-              ],
-            },
-          ],
-        }),
+      if (!generatedText) {
+        return res.status(500).json({
+          error:
+            "Failed to generate description",
+        });
       }
-    );
 
-    const data = await response.json();
+      res.status(200).json({
+        success: true,
+        productName,
+        description: generatedText,
+      });
 
-    const generatedText =
-      data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    } catch (error) {
+      console.error(error);
 
-    if (!generatedText) {
-      return res.status(500).json({
-        error: "Failed to generate description",
+      res.status(500).json({
+        error: "AI service unavailable",
       });
     }
-
-    res.status(200).json({
-      success: true,
-      productName,
-      description: generatedText,
-    });
-
-  } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      error: "AI service unavailable",
-    });
   }
-});
+);
 
-
-//Reusable function for payment success messages
-
-export async function generateThankYou(customerName, amount) {
+// Reusable function for payment success messages
+export async function generateThankYou(
+  customerName,
+  amount
+) {
   const prompt = `
 Generate a friendly thank-you message.
 
